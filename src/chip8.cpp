@@ -118,37 +118,76 @@ void chip8::cycle()
 
         // 1NNN (0x1NNN): Jumps to address NNN
     case 0x1000:
-        // TODO: Implement 1NNN
+        // Set program counter to address NNN
+        _programCounter = _opcode & 0x0FFF;
         break;
 
         // 2NNN (0x2NNN): Calls subroutine at NNN
     case 0x2000:
-        // TODO: Implement 2NNN
+        // Store current address in stack
+        _stack[_stackPointer] = _programCounter;
+        // Increment Stack Pointer
+        ++_stackPointer;
+        // Set the program counter to the address of NNN
+        _programCounter = _opcode & 0x0FFF;
         break;
 
         // 3XNN (0x3XNN): Skips the next instruction if VX equals NN (Usually the next instruction is a jump to skip a code block)
     case 0x3000:
-        // TODO: Implement 3XNN
+        if (_v[(_opcode & 0x0F00) >> 8] == _opcode & 0x00FF)
+        {
+            // Skip the next instruction
+            _programCounter += 4;
+        }
+        else
+        {
+            // Move to next instruction
+            _programCounter += 2;
+        }
         break;
 
         // 4XNN (0x4XNN): Skips the next instruction if VX does not equal NN (Usually the next instruction is a jump to skip a code block)
     case 0x4000:
-        // TODO: Implement 4XNN
+        if (_v[(_opcode & 0x0F00) >> 8] != _opcode & 0x00FF)
+        {
+            // Skip next instruction
+            _programCounter += 4;
+        }
+        else
+        {
+            // Move to next instruction
+            _programCounter += 2;
+        }
         break;
 
         // 5XY0 (0x5XY0): Skips the next instruction if VX equals VY (Usually the next instruction is a jump to skip a code block)
     case 0x5000:
-        // TODO: Implement 5XY0
+        if (_v[(_opcode & 0x0F00) >> 8] == _v[(_opcode & 0x00F0) >> 4])
+        {
+            // Skip next instruction
+            _programCounter += 4;
+        }
+        else
+        {
+            // Move to next instruction
+            _programCounter += 2;
+        }
         break;
 
         // 6XNN (0x6XNN): Sets VX to NN
     case 0x6000:
-        // TODO: Implement 6XNN
+        _v[(_opcode & 0x0F00) >> 8] = _opcode & 0x00FF;
+
+        // Move to next instruction
+        _programCounter += 2;
         break;
 
         // 7XNN (0x7XNN): Adds NN to VX (Carry flag is not changed)
     case 0x7000:
-        // TODO: Implement 7XNN
+        _v[(_opcode & 0x0F00) >> 8] += _opcode & 0x00FF;
+
+        // Move to next instruction
+        _programCounter += 2;
         break;
 
         // Multiple 0x8 opcodes so switch again and compare last four bits
@@ -157,47 +196,121 @@ void chip8::cycle()
         {
         // 8XY0 (0x8XY0): Sets VX to the value of VY
         case 0x0000:
-            // TODO: Implement 8XY0
+            _v[(_opcode & 0x0F00) >> 8] = _v[(_opcode & 0x00F0) >> 4];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XY1 (0x8XY1): Sets VX to VX or VY (Bitwise OR operation)
         case 0x0001:
-            // TODO: Implement 8XY1
+            _v[(_opcode & 0x0F00) >> 8] |= _v[(_opcode & 0x00F0) >> 4];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XY2 (0x8XY2): Sets VX to VX and VY (Bitwise AND operation)
         case 0x0002:
-            // TODO: Implement 8XY2
+            _v[(_opcode & 0x0F00) >> 8] &= _v[(_opcode & 0x00F0) >> 4];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XY3 (0x8XY3): Sets VX to VX xor VY.
         case 0x0003:
-            // TODO: Implement 8XY3
+            _v[(_opcode & 0x0F00) >> 8] ^= _v[(_opcode & 0x00F0) >> 4];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XY4 (0x8XY4): Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there is not
         case 0x0004:
-            // TODO: Implement 8XY4
+            // Check if VY is larger than VX
+            if (_v[(_opcode & 0x00F0) >> 4] > _v[(_opcode & 0x0F00) >> 8])
+            {
+                // VY is larger so set VF to 1 because there is a carry
+                _v[0xF] = 1;
+            }
+            else
+            {
+                // VY is not larger so set VF to 0 as there is no carry
+                _v[0xF] = 0;
+            }
+
+            // Add VY to VX
+            _v[(_opcode & 0x0F00) >> 8] += _v[(_opcode & 0x00F0) >> 4];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XY5 (0x8XY5): VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there is not
         case 0x0005:
-            // TODO: Implement 8XY5
+            // Check if VY is larger than VX
+            if (_v[(_opcode & 0x00F0) >> 4] > _v[(_opcode & 0x0F00) >> 8])
+            {
+                // VY is larger so set VF to 0 because there is a borrow
+                _v[0xF] = 0;
+            }
+            else
+            {
+                // VY is not larger so set VF to 1 as there is no borrow
+                _v[0xF] = 1;
+            }
+
+            // Subtract VY from VX
+            _v[(_opcode & 0x0F00) >> 8] -= _v[(_opcode & 0x00F0) >> 4];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XY6 (0x8XY6): Stores the least significant bit of VX in VF and then shifts VX to the right by 1
         case 0x0006:
-            // TODO: Implement 8XY6
+            // Store least significant bit (...& 0x1) in VF
+            _v[0xF] = _v[(_opcode & 0x0F00) >> 8] & 0x1;
+
+            // Shift VX to the right by 1
+            _v[(_opcode & 0x0F00) >> 8] >>= 1;
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XY7 (0x8XY7): Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there is not
         case 0x0007:
-            // TODO: Implement 8XY7
+            // Check if VX is larger than VY
+            if (_v[(_opcode & 0x0F00) >> 8] > _v[(_opcode & 0x00F0) >> 4])
+            {
+                // VX is larger so set VF to 0 because there is a borrow
+                _v[0xF] = 0;
+            }
+            else
+            {
+                // VX is not larger so set VF to 1 because there is no borrow
+                _v[0xF] = 1;
+            }
+
+            // VX = VY - VX
+            _v[(_opcode & 0x0F00) >> 8] = _v[(_opcode & 0x00F0) >> 4] - _v[(_opcode & 0x0F00) >> 8];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         // 8XYE (0x8XYE): Stores the most significant bit of VX in VF and then shifts VX to the left by 1
         case 0x000E:
-            // TODO: Implement 8XYE
+            // Store most significant bit (...& 0x0) in VF
+            _v[0xF] = _v[(_opcode & 0x0F00) >> 8] >> 7;
+
+            // Shift VX to the left by 1
+            _v[(_opcode & 0x0F00) >> 8] <<= 1;
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
         default:
@@ -207,23 +320,38 @@ void chip8::cycle()
 
         // 9XY0 (0x9XY0): Skips the next instruction if VX does not equal VY (Usually the next instruction is a jump to skip a code block)
     case 0x9000:
-        // TODO: Implement 9XY0
+        if (_v[(_opcode & 0x0F00) >> 8] != _v[(_opcode & 0x00F0) >> 8])
+        {
+            // Skip next instruction
+            _programCounter += 4;
+        }
+        else
+        {
+            // Move to next instruction
+            _programCounter += 2;
+        }
         break;
 
         // ANNN (0xANNN): Sets index register to the address NNN
     case 0xA000:
         _indexRegister = _opcode & 0x0FFF;
+
+        // Move to next instruction
         _programCounter += 2;
         break;
 
         // BNNN (0xBNNN): Jumps to the address NNN plus V0
     case 0xB000:
-        // TODO: Implement BNNN
+        _programCounter = (_opcode & 0x0FFF) + _v[0];
         break;
 
         // CXNN (0xCXNN): Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN
     case 0xC000:
-        // TODO: Implement CXNN
+        // "rand() & 0xFF" gives a random number between 0 and 255 (0xFF)
+        _v[(_opcode & 0x0F00) >> 8] = (_opcode & 0x00FF) & (rand() & 0xFF);
+
+        // Move to next instruction
+        _programCounter += 2;
         break;
 
         // DXYN (0xDXYN): Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N+1 pixels.
@@ -257,7 +385,10 @@ void chip8::cycle()
         {
             // FX07 (0xFX07): Sets VX to the value of the delay timer
         case 0x0007:
-            // TODO: Implement FX07
+            _v[(_opcode & 0x0F00) >> 8] = _delayTimer;
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
             // FX0A (0xFX0A): A key press is awaited, and then stored in VX (Blocking Operation. All instruction halted until next key event)
@@ -267,17 +398,35 @@ void chip8::cycle()
 
             // FX15 (0xFX15): Sets the delay timer to VX
         case 0x0015:
-            // TODO: Implement FX15
+            _delayTimer = _v[(_opcode & 0x0F00) >> 8];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
             // FX18 (0xFX18): Sets the sound timer to VX
         case 0x0018:
-            // TODO: Implement FX18
+            _soundTimer = _v[(_opcode & 0x0F00) >> 8];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
             // FX1E (0xFX1E): Adds VX to I. VF is not affected
         case 0x001E:
-            // TODO: Implement FX1E
+            // VF is set to 1 if range overflows (index register + VX > 0xFFF)
+            if (_indexRegister + _v[(_opcode & 0x0F00) >> 8] > 0xFFF)
+            {
+                _v[0xF] = 1;
+            }
+            else
+            {
+                _v[0xF] = 0;
+            }
+            _indexRegister += _v[(_opcode & 0x0F00) >> 8];
+
+            // Move to next instruction
+            _programCounter += 2;
             break;
 
             // FX29 (0xFX29): Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font
@@ -308,8 +457,23 @@ void chip8::cycle()
     default:
         printf("Bad opcode: 0x%X\n", _opcode);
     }
+
     // Execute Opcode
+
     // Update Timers
+    if (_delayTimer > 0)
+    {
+        --_delayTimer;
+    }
+
+    if (_soundTimer > 0)
+    {
+        if (_soundTimer == 1)
+        {
+            printf("BEEP\n");
+            --_soundTimer;
+        }
+    }
 }
 
 bool chip8::drawFlag()
